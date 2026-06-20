@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <PlatformTarget>x64</PlatformTarget>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <UseWPF>true</UseWPF>
+    <LangVersion>latest</LangVersion>
+    <!-- Allows compiling the '-windows' TFM on macOS (build OK; runs only inside Revit/Windows). -->
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <!-- DLL lands in bin\<Config>\ without a TFM subfolder (simpler copy path). -->
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Nice3point.Revit.Api.RevitAPI"   Version="2026.*" />
+    <PackageReference Include="Nice3point.Revit.Api.RevitAPIUI" Version="2026.*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SmartConnect.Core\SmartConnect.Core.csproj" />
+  </ItemGroup>
+
+</Project>
