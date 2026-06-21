@@ -1,4 +1,4 @@
-namespace SmartConnect.Core;
+namespace FastConnect.Core;
 
 public static class ConnectorMatcher
 {

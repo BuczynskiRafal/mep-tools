@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RevitAddIns>
   <AddIn Type="Application">
-    <Name>Smart Connect MEP</Name>
-    <Assembly>SmartConnect.Revit.dll</Assembly>
-    <FullClassName>SmartConnect.Revit.App</FullClassName>
+    <Name>Fast Connect MEP</Name>
+    <Assembly>FastConnect.Revit.dll</Assembly>
+    <FullClassName>FastConnect.Revit.App</FullClassName>
     <AddInId>45be68b7-1ed8-49cd-8af2-553c955b782a</AddInId>
     <VendorId>RBUC</VendorId>
     <VendorDescription>Rafal Buczynski</VendorDescription>

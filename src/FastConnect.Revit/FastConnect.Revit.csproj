@@ -19,7 +19,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\SmartConnect.Core\SmartConnect.Core.csproj" />
+    <ProjectReference Include="..\FastConnect.Core\FastConnect.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\icon32.png" />
+    <EmbeddedResource Include="Resources\icon16.png" />
   </ItemGroup>
 
 </Project>

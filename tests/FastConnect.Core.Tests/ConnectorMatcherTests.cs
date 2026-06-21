@@ -1,4 +1,4 @@
-using SmartConnect.Core;
+using FastConnect.Core;
 using Xunit;
 
 public class ConnectorMatcherTests
