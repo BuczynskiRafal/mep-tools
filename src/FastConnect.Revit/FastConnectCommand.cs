@@ -1,13 +1,14 @@
 using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
+using Autodesk.Revit.UI.Events;
 using Autodesk.Revit.UI.Selection;
-using SmartConnect.Core;
+using FastConnect.Core;
 
-namespace SmartConnect.Revit;
+namespace FastConnect.Revit;
 
 [Transaction(TransactionMode.Manual)]
-public class SmartConnectCommand : IExternalCommand
+public class FastConnectCommand : IExternalCommand
 {
     private const double SizeToleranceFeet = 1.0 / 304.8; // ~1 mm
 
@@ -35,7 +36,7 @@ public class SmartConnectCommand : IExternalCommand
 
         if (freeFixed.Count == 0 || freeMoving.Count == 0)
         {
-            TaskDialog.Show("Smart Connect", "At least one element has no free connectors.");
+            TaskDialog.Show("Fast Connect", "At least one element has no free connectors.");
             return Result.Cancelled;
         }
 
@@ -45,15 +46,24 @@ public class SmartConnectCommand : IExternalCommand
         var match = ConnectorMatcher.FindBestPair(infosFixed, infosMoving, SizeToleranceFeet);
         if (match is null)
         {
-            TaskDialog.Show("Smart Connect", "No compatible connector pair found (different domain or size).");
+            TaskDialog.Show("Fast Connect", "No compatible connector pair found (different domain or size).");
             return Result.Cancelled;
         }
 
         Connector tgt = freeFixed[match.Value.A.SourceIndex];   // fixed
         Connector src = freeMoving[match.Value.B.SourceIndex];  // moving
 
-        using var t = new Transaction(doc, "Smart Connect MEP");
+        UIApplication uiapp = commandData.Application;
+        using var t = new Transaction(doc, "Fast Connect MEP");
         t.Start();
+
+        // Auto-dismiss Revit's "this moves an element connected to the system" prompt,
+        // whether it surfaces as a transaction warning or a modal dialog.
+        FailureHandlingOptions failureOptions = t.GetFailureHandlingOptions();
+        failureOptions.SetFailuresPreprocessor(new MepConnectWarningSwallower());
+        t.SetFailureHandlingOptions(failureOptions);
+
+        uiapp.DialogBoxShowing += SuppressConnectedMoveDialog;
         try
         {
             AlignConnectors(doc, movingEl.Id, src, tgt);
@@ -65,12 +75,22 @@ public class SmartConnectCommand : IExternalCommand
         {
             t.RollBack();
             message = ex.Message;
-            TaskDialog.Show("Smart Connect — error", ex.Message);
+            TaskDialog.Show("Fast Connect — error", ex.Message);
             return Result.Failed;
+        }
+        finally
+        {
+            uiapp.DialogBoxShowing -= SuppressConnectedMoveDialog;
         }
     }
 
+    private static void SuppressConnectedMoveDialog(object? sender, DialogBoxShowingEventArgs e)
+        => e.OverrideResult(1); // 1 = affirmative/OK on Revit's warning dialogs
+
     private static List<Connector> GetFreeConnectors(Element element)
+        => GetEndConnectors(element).Where(c => !c.IsConnected).ToList();
+
+    private static List<Connector> GetEndConnectors(Element element)
     {
         var result = new List<Connector>();
         ConnectorManager? cm = element switch
@@ -82,7 +102,7 @@ public class SmartConnectCommand : IExternalCommand
         if (cm == null) return result;
 
         foreach (Connector c in cm.Connectors)
-            if (c.ConnectorType == ConnectorType.End && !c.IsConnected)
+            if (c.ConnectorType == ConnectorType.End)
                 result.Add(c);
         return result;
     }
