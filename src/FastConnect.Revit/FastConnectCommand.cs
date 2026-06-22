@@ -1,6 +1,7 @@
 using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
+using Autodesk.Revit.UI.Events;
 using Autodesk.Revit.UI.Selection;
 using FastConnect.Core;
 
@@ -52,17 +53,17 @@ public class FastConnectCommand : IExternalCommand
         Connector tgt = freeFixed[match.Value.A.SourceIndex];   // fixed
         Connector src = freeMoving[match.Value.B.SourceIndex];  // moving
 
-        if (HasConnectedConnectorsOtherThan(movingEl, src))
-        {
-            TaskDialogResult decision = TaskDialog.Show(
-                "Fast Connect",
-                "The moving element has other connected connectors. Moving it can affect an existing MEP system.\n\nContinue anyway?",
-                TaskDialogCommonButtons.Yes | TaskDialogCommonButtons.No);
-            if (decision != TaskDialogResult.Yes) return Result.Cancelled;
-        }
-
+        UIApplication uiapp = commandData.Application;
         using var t = new Transaction(doc, "Fast Connect MEP");
         t.Start();
+
+        // Auto-dismiss Revit's "this moves an element connected to the system" prompt,
+        // whether it surfaces as a transaction warning or a modal dialog.
+        FailureHandlingOptions failureOptions = t.GetFailureHandlingOptions();
+        failureOptions.SetFailuresPreprocessor(new MepConnectWarningSwallower());
+        t.SetFailureHandlingOptions(failureOptions);
+
+        uiapp.DialogBoxShowing += SuppressConnectedMoveDialog;
         try
         {
             AlignConnectors(doc, movingEl.Id, src, tgt);
@@ -77,7 +78,14 @@ public class FastConnectCommand : IExternalCommand
             TaskDialog.Show("Fast Connect — error", ex.Message);
             return Result.Failed;
         }
+        finally
+        {
+            uiapp.DialogBoxShowing -= SuppressConnectedMoveDialog;
+        }
     }
+
+    private static void SuppressConnectedMoveDialog(object? sender, DialogBoxShowingEventArgs e)
+        => e.OverrideResult(1); // 1 = affirmative/OK on Revit's warning dialogs
 
     private static List<Connector> GetFreeConnectors(Element element)
         => GetEndConnectors(element).Where(c => !c.IsConnected).ToList();
@@ -98,15 +106,6 @@ public class FastConnectCommand : IExternalCommand
                 result.Add(c);
         return result;
     }
-
-    private static bool HasConnectedConnectorsOtherThan(Element element, Connector selectedConnector)
-        => GetEndConnectors(element).Any(c => c.IsConnected && !IsSameConnector(c, selectedConnector));
-
-    private static bool IsSameConnector(Connector left, Connector right)
-        => left.Owner.Id == right.Owner.Id
-            && left.ConnectorType == right.ConnectorType
-            && left.Domain == right.Domain
-            && left.Origin.IsAlmostEqualTo(right.Origin);
 
     private static ConnectorInfo ToInfo(Connector c, int index)
     {
