@@ -2,7 +2,7 @@
 
 A Revit add-in that connects MEP elements. Pick two pipes or fittings and it lines them up and joins them.
 
-![icon](assets/icon.png)
+![Fast Connect in action](assets/demo.gif)
 
 ## Usage
 
